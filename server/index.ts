@@ -2,14 +2,66 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { createServer } from "http";
+import { db } from "db";
+import { packages } from "db/schema";
+import { getPopularPackages, getGithubRepoFromNpm } from "../client/src/lib/npm";
+import { eq } from "drizzle-orm";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+async function seedDatabase() {
+  try {
+    console.log("Fetching popular packages with funding info...");
+    const npmPackages = await getPopularPackages();
+    
+    for (const pkg of npmPackages) {
+      // Check if package already exists
+      const [existing] = await db
+        .select()
+        .from(packages)
+        .where(eq(packages.name, pkg.name))
+        .limit(1);
+
+      const packageData = {
+        name: pkg.name,
+        description: pkg.description,
+        version: pkg.version,
+        downloads: pkg.downloads,
+        githubRepo: getGithubRepoFromNpm(pkg),
+        fundingLinks: pkg.funding,
+        lastUpdated: new Date(),
+      };
+
+      if (existing) {
+        // Update existing package
+        await db
+          .update(packages)
+          .set(packageData)
+          .where(eq(packages.id, existing.id));
+        console.log(`Updated package: ${pkg.name}`);
+      } else {
+        // Insert new package
+        await db.insert(packages).values(packageData);
+        console.log(`Added new package: ${pkg.name}`);
+      }
+    }
+    console.log("Database seeding completed successfully");
+  } catch (error) {
+    console.error("Error seeding database:", error);
+  }
+}
+
 (async () => {
   registerRoutes(app);
   const server = createServer(app);
+
+  // Run database seeding
+  await seedDatabase();
+  
+  // Set up a periodic update every 12 hours
+  setInterval(seedDatabase, 12 * 60 * 60 * 1000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

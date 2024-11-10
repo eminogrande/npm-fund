@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,6 +11,9 @@ export const packages = pgTable("packages", {
   githubRepo: text("github_repo"),
   downloads: integer("downloads").default(0),
   tokensRaised: text("tokens_raised").default("0"),
+  fundingGoal: text("funding_goal"),
+  fundingLinks: jsonb("funding_links").$type<Array<{ type: string; url: string }>>(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
