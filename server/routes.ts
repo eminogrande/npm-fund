@@ -11,19 +11,49 @@ export function registerRoutes(app: Express) {
 
   // Get all packages with optional search
   app.get("/api/packages", async (req, res) => {
-    try {
-      const { search } = req.query;
-      let query = db.select().from(packages);
-      
-      if (search) {
-        query = query.where(like(packages.name, `%${search}%`));
+    const hardcodedPackages = [
+      {
+        id: 1,
+        name: "react",
+        description: "A JavaScript library for building user interfaces",
+        version: "18.2.0",
+        downloads: 15000000,
+        tokensRaised: "1.5",
+        maintainerId: "1",
+        githubRepo: "facebook/react",
+        fundingLinks: [{ type: "github", url: "https://github.com/sponsors/react" }]
+      },
+      {
+        id: 2,
+        name: "vue",
+        description: "Progressive JavaScript Framework",
+        version: "3.3.4",
+        downloads: 8000000,
+        tokensRaised: "0.8",
+        maintainerId: "2",
+        githubRepo: "vuejs/vue",
+        fundingLinks: [{ type: "github", url: "https://github.com/sponsors/vuejs" }]
+      },
+      {
+        id: 3,
+        name: "express",
+        description: "Fast, unopinionated, minimalist web framework",
+        version: "4.18.2",
+        downloads: 12000000,
+        tokensRaised: "0.5",
+        maintainerId: "3",
+        githubRepo: "expressjs/express",
+        fundingLinks: [{ type: "github", url: "https://github.com/sponsors/express" }]
       }
-      
-      const results = await query;
-      res.json(results);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch packages" });
+    ];
+
+    const { search } = req.query;
+    if (search) {
+      return res.json(hardcodedPackages.filter(p => 
+        p.name.toLowerCase().includes(String(search).toLowerCase())
+      ));
     }
+    res.json(hardcodedPackages);
   });
 
   // Get single package details
